@@ -2,15 +2,15 @@
 title: "Rubik’s Cube Competition Density and Correlation with 3x3 Speed"
 author: "Lauren Phung"
 subtitle: "Are the fastest speedcubers the ones who have the most competitions near them?"
-date: October 27, 2025
+date: November 13, 2025
 date-format: long
 ---
 
 # Introduction
 
-The Rubik's Cube is a popular 6-sided twisty puzzle first invented in the 1974 by Erno Rubik. Since the late 2000s, the cube's popularity has made a comeback. Many people enjoy the competitive aspect of the cube, aiming to solve it as fast as possible. The current 3x3 single world record is 3.05 seconds by Xuanyi Geng from China.
+The Rubik's Cube is a popular 6-sided twisty puzzle first invented in the 1974 by Erno Rubik. Since the late 2000s, the cube's popularity has made a comeback. Many people enjoy the competitive aspect of the cube, aiming to solve it as fast as possible. The current 3x3 single world record is 3.05 seconds by Xuanyi Geng from China. The current 3x3 average world record is 3.90 seconds by Yiheng Wang from China.
 
-Official Rubik's Cube competitions are governed by the World Cube Association (WCA), an entirely volunteer run non-profit organization. More than 273,000 people have competed in WCA sanctioned competitions. Competitions are held every week worldwide, but the geographic distribution of competition certainly isn't even.     
+Official Rubik's Cube competitions are governed by the World Cube Association (WCA), an entirely volunteer run non-profit organization that was founded in 2004. More than 273,000 people have competed in WCA sanctioned competitions. Competitions are held every week worldwide, but the geographic distribution of competition certainly isn't even. The United States has had over 2,000 cube competitions while other countries have had less than 10 or even none.     
 
 My project aims to determine the relationship between the density of competitions in a given country and the speed of a country's competitors. I have 2 main research questions: How are World Cube Association competitions geographically distributed? Is the density of WCA competitions correlated to the speed of the competitors in the region?
 
@@ -31,46 +31,116 @@ These 3 variables will be compared to the number of competitions in each country
 
 I also want to explore each competitor's speed in relation to the density of competition. I will calculate the geographic center of competitions for each cuber and determine whether faster 3x3 competitors live in regions with more competitions. 
 
-```{r}
-x=3+4
-```
-
-Refer to output in your narrative like this: x=`r x` .
-
-Load any required packages in a code chunk (you may need to install some packages):
+## Libraries
 
 ```{r, message=F, warning=F}
 library(tidyverse)
 library(leaflet)
+library(knitr)
 library(kableExtra)
 library(htmlwidgets)
 library(widgetframe)
+library(sf)
+library(sfhotspot)
+library(dplyr)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(leaflet)
+library(countrycode)
 knitr::opts_chunk$set(widgetframe_widgets_dir = 'widgets' ) 
 knitr::opts_chunk$set(cache=TRUE)  # cache the results for quick compiling
 ```
 
-## Download and clean all required data
+## Download the required data
 
 ```{r}
-n=20
-data=data.frame(x=runif(n,-180,180),
-                y=runif(n,-60,60),
-                size = runif(n, 5, 20),
-                category = factor(
-                  sample(letters[1:5], n, replace = TRUE)
-                  ),
-                value = rnorm(n))
+# loads the tsv from the WCA Results Export
+competitions_tsv <- read.delim("data/WCA_export_Competitions.tsv", header = TRUE)
+
+# contains every competitor and their country
+persons_tsv <- read.delim("data/WCA_export_Persons.tsv", header = TRUE)
+
+# contains every competitor's best 3x3x3 average 
+ranks_tsv <- read.delim("data/WCA_export_RanksAverage.tsv", header = TRUE)
 ```
 
-```{r, results='asis'}
-data %>% 
-  slice(1:10) %>% #show only 1:n rows
-  kable(digits=2,align="c")%>% #make table and round to two digits
-  kable_styling(bootstrap_options = 
-                  c("striped", "hover", "condensed", "responsive")) #apply other formatting
+## Cleaning the Data
+```{r, warning = F}
+# cleaning competitions
+competitions_tsv <- competitions_tsv %>%
+  select(id, name, countryId, latitude, longitude, cancelled, year) %>%  # selects the columns I want to keep
+  filter(cancelled == 0) %>% #removes cancelled competitions 
+  mutate(longitude = as.numeric(longitude), # converts from chr to numeric
+    latitude = as.numeric(latitude)) %>%
+  mutate(latitude = latitude / 1e6, # converts from microdegrees to degrees
+    longitude = longitude / 1e6) %>%
+  mutate(countryId = countrycode(countryId, origin = "country.name", destination = "country.name")) %>%
+  mutate(iso_a3 = countrycode(countryId, origin = "country.name", destination = "iso3c")
+  ) # adds iso country code
+
+# creates a dataframe that counts the number of comps per country
+counts <- competitions_tsv %>%
+  count(countryId, name = "count") %>%
+  mutate(iso_a3 = countrycode(countryId, origin = "country.name", destination = "iso3c")
+  )
+
+# Convert TSV to sf object with projected CRS 
+competitions_sf <- st_as_sf(competitions_tsv,
+  coords = c("longitude", "latitude"), 
+  crs = 4326)
+
+#cleaning persons and ranks will be more difficult as their are currently stored in a single column in their TSVs. The plan is to separate by commas.
 ```
 
-Add any additional processing steps here.
+## Map of all WCA Competitions
+```{r}
+# simple map with all of the competitions plotted individually
+ggplot() +
+  borders("world", colour = "gray70", fill = "gray90") +
+  geom_sf(data = competitions_sf, color = "red", size = 3, alpha = 0.05) +
+  theme_minimal() +
+  labs(
+    title = "World Map of WCA Competitions",
+    x = "Longitude",
+    y = "Latitude")
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+count_data <- full_join(world, counts, by = "iso_a3")
+
+# choropleth map
+ggplot(count_data) +
+  geom_sf(aes(fill = count), color = "white") +
+  scale_fill_viridis_c(option = "plasma", na.value = "gray90") +
+  theme_minimal() +
+  labs(title = "WCA Competitions per Country", fill = "Count")
+
+#table of countries with the most competitions
+top_countries <- count_data %>%
+  select(count, countryId) %>% 
+  st_drop_geometry() %>%
+  arrange(desc(count)) %>%   # sort from highest to lowest
+  head(10)
+
+kable(top_countries, 
+      col.names = c("Country", "Competition Count"),
+      caption = "Top 10 Countries by Number of Competitions")
+
+
+```
+
+
+## KDE
+```{r, message = F, warning = F}
+competitions_sf_utm <- st_as_sf(
+  competitions_tsv,
+  coords = c("longitude", "latitude"),  
+  crs = 3857)
+
+competitions_kde <- hotspot_kde(competitions_sf_utm)
+
+plot(competitions_kde["kde"])
+```
 
 # Results
 
@@ -80,27 +150,12 @@ Tables and figures (maps and other graphics) are carefully planned to convey the
 
 Show tables, plots, etc. and describe them.
 
-```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data"}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
-```
+
 
 ```{r}
-data %>% 
-  ggplot(aes(x=x,y=y,col=category))+
-  geom_point()
+
 ```
 
-### Dygraphs Example
-
-```{r}
-library(dygraphs)
-dygraph(nhtemp, main = "New Haven Temperatures") |> 
-  dyRangeSelector(dateWindow = c("1920-01-01", "1960-01-01")) 
-```
 
 # Conclusions
 
