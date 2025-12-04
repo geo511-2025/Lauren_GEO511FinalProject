@@ -82,6 +82,7 @@ results_tsv <- read.delim("data/WCA_export_Results.tsv", header = TRUE)
 ## Dependent Variable: Competition Count Per Country
 ```{r}
 # cleaning competitions_tsv
+head(competitions_tsv) |> kable()
 competitions_tsv <- competitions_tsv %>%
   select(id, name, countryId, latitude, longitude, cancelled, year) %>%  # selects the columns I want to keep
   filter(cancelled == 0) %>% #removes cancelled competitions 
