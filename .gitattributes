@@ -1,0 +1,1 @@
+data/WCA_export_Results.tsv filter=lfs diff=lfs merge=lfs -text
