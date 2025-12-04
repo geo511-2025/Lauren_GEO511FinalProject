@@ -11,6 +11,7 @@ format:
 execute:
   warning: false
   message: false
+  cache: false
 ---
 
 # Introduction
@@ -75,7 +76,7 @@ persons_tsv <- read.delim("data/WCA_export_Persons.tsv", header = TRUE)
 ranks_tsv <- read.delim("data/WCA_export_RanksAverage.tsv", header = TRUE)
 
 # contains all results and world, continental, and national records
-results_tsv <- read.delim("data/WCA_export_Results.tsv", header = TRUE)
+results_tsv <- read.delim("data/WCA_export_Results.tsv", header = TRUE) 
 ```
  
  
@@ -105,7 +106,7 @@ counts <- competitions_tsv %>%
 ```{r}
 # shows only the competitor's fastest average
 results_top10 <- results_tsv %>%
-#  select(average, eventId, personName, personId, regionalAverageRecord, #personCountryId) %>%
+  select(average, eventId, personName, personId, regionalAverageRecord,    personCountryId) %>%
   filter(eventId == 333, average != -1, average != 0) %>% # keeps valid 3x3 results
   group_by(personName) %>%
   slice_min(order_by = average, n = 1, with_ties = FALSE) %>%
