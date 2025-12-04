@@ -82,7 +82,7 @@ results_tsv <- read.delim("data/WCA_export_Results.tsv", header = TRUE)
 ## Dependent Variable: Competition Count Per Country
 ```{r}
 # cleaning competitions_tsv
-head(competitions_tsv) |> kable()
+
 competitions_tsv <- competitions_tsv %>%
   select(id, name, countryId, latitude, longitude, cancelled, year) %>%  # selects the columns I want to keep
   filter(cancelled == 0) %>% #removes cancelled competitions 
@@ -104,6 +104,8 @@ counts <- competitions_tsv %>%
 ## Independent Variable 1: Mean of the top 10 3x3 averages for each country
 ```{r}
 # shows only the competitor's fastest average
+head(results_tsv) |> kable() |> print()
+
 results_top10 <- results_tsv %>%
   select(average, eventId, personName, personId, regionalAverageRecord, personCountryId) %>%
   filter(eventId == 333, average != -1, average != 0) %>% # keeps valid 3x3 results
