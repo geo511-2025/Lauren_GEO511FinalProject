@@ -104,10 +104,8 @@ counts <- competitions_tsv %>%
 ## Independent Variable 1: Mean of the top 10 3x3 averages for each country
 ```{r}
 # shows only the competitor's fastest average
-head(results_tsv) |> kable() |> print()
-
 results_top10 <- results_tsv %>%
-  select(average, eventId, personName, personId, regionalAverageRecord, personCountryId) %>%
+#  select(average, eventId, personName, personId, regionalAverageRecord, #personCountryId) %>%
   filter(eventId == 333, average != -1, average != 0) %>% # keeps valid 3x3 results
   group_by(personName) %>%
   slice_min(order_by = average, n = 1, with_ties = FALSE) %>%
