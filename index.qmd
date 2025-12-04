@@ -77,8 +77,8 @@ ranks_tsv <- read.delim("data/WCA_export_RanksAverage.tsv", header = TRUE)
 # contains all results and world, continental, and national records
 results_tsv <- read.delim("data/WCA_export_Results.tsv", header = TRUE)
 ```
-
-
+ 
+ 
 ## Dependent Variable: Competition Count Per Country
 ```{r}
 # cleaning competitions_tsv
